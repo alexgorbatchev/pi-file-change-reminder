@@ -1,0 +1,37 @@
+{
+  "name": "pi-file-change-reminder",
+  "version": "0.1.0",
+  "description": "Pi extension that injects reminder messages when specific files are modified.",
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "reminder"
+  ],
+  "files": [
+    "fileChangeReminderExtension.ts",
+    "README.md",
+    "examples"
+  ],
+  "pi": {
+    "extensions": [
+      "./fileChangeReminderExtension.ts"
+    ]
+  },
+  "dependencies": {
+    "picomatch": "^4.0.3"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "^0.61.1",
+    "@types/picomatch": "^4.0.2",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "verify:pi-load": "PI_OFFLINE=1 pi --no-extensions -e ./fileChangeReminderExtension.ts --list-models > /dev/null"
+  }
+}
