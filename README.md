@@ -73,8 +73,16 @@ If `PI_REMINDERS_FILE` is relative, it is resolved from the detected project dir
 
 ## Development
 
+This package uses npm.
+
 ```bash
 npm install
+npm run check
+```
+
+Or run the individual checks:
+
+```bash
 npm run typecheck
 npm run verify:pi-load
 ```

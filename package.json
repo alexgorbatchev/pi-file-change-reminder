@@ -30,6 +30,7 @@
     "typescript": "^5.9.3"
   },
   "scripts": {
+    "check": "npm run typecheck && npm run verify:pi-load",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "verify:pi-load": "PI_OFFLINE=1 pi --no-extensions -e ./fileChangeReminderExtension.ts --list-models > /dev/null"
   }
