@@ -14,6 +14,7 @@ interface IToolInputWithPath {
 
 const EXTENSION_ID = "file-change-reminder";
 const DEFAULT_RULES_FILE = ".pi/reminders.json";
+const COMMAND_NAME = "pi-file-change-reminder";
 const INJECTED_ENTRY_TYPE = `${EXTENSION_ID}.injected`;
 
 export default function fileChangeReminderExtension(pi: ExtensionAPI): void {
@@ -70,15 +71,19 @@ export default function fileChangeReminderExtension(pi: ExtensionAPI): void {
 		}
 	};
 
-	const resolveRulesFilePath = async (cwd: string): Promise<string> => {
+	const resolveRulesFilePathFromProjectDirectory = (projectDirectory: string): string => {
 		const envValue = process.env.PI_REMINDERS_FILE;
 		const configuredPath = readNonEmptyString(envValue) ?? DEFAULT_RULES_FILE;
 		if (path.isAbsolute(configuredPath)) {
 			return configuredPath;
 		}
 
-		const projectDirectory = await resolveProjectDirectory(cwd);
 		return path.resolve(projectDirectory, configuredPath);
+	};
+
+	const resolveRulesFilePath = async (cwd: string): Promise<string> => {
+		const projectDirectory = await resolveProjectDirectory(cwd);
+		return resolveRulesFilePathFromProjectDirectory(projectDirectory);
 	};
 
 	const loadRules = async (ctx: ExtensionContext, force: boolean): Promise<IReminderRule[]> => {
@@ -156,6 +161,10 @@ export default function fileChangeReminderExtension(pi: ExtensionAPI): void {
 		} else {
 			pi.sendUserMessage(rule.reminder, { deliverAs: "steer" });
 		}
+
+		if (ctx.hasUI) {
+			ctx.ui.notify(`Auto reminder injected for ${matchedPath} (rule: ${rule.glob})`, "info");
+		}
 	};
 
 	const onSessionChanged = async (_ctxEvent: unknown, ctx: ExtensionContext): Promise<void> => {
@@ -167,6 +176,27 @@ export default function fileChangeReminderExtension(pi: ExtensionAPI): void {
 	pi.on("session_switch", onSessionChanged);
 	pi.on("session_fork", onSessionChanged);
 	pi.on("session_tree", onSessionChanged);
+
+	pi.registerCommand(COMMAND_NAME, {
+		description: "Inject a prompt that explains how to update reminder rules",
+		handler: async (args, ctx) => {
+			const projectDirectory = await resolveProjectDirectory(ctx.cwd);
+			const rulesFilePath = resolveRulesFilePathFromProjectDirectory(projectDirectory);
+			const normalizedRulesFilePath = normalizePath(rulesFilePath);
+			const normalizedProjectDirectory = normalizePath(projectDirectory);
+			const prompt = buildReminderEditPrompt(normalizedRulesFilePath, normalizedProjectDirectory, args);
+
+			if (ctx.isIdle()) {
+				pi.sendUserMessage(prompt);
+				return;
+			}
+
+			pi.sendUserMessage(prompt, { deliverAs: "followUp" });
+			if (ctx.hasUI) {
+				ctx.ui.notify(`Queued /${COMMAND_NAME} prompt as a follow-up message.`, "info");
+			}
+		},
+	});
 
 	pi.on("tool_result", async (event, ctx) => {
 		if (event.isError) {
@@ -183,12 +213,13 @@ export default function fileChangeReminderExtension(pi: ExtensionAPI): void {
 			return;
 		}
 
+		const projectDirectory = await resolveProjectDirectory(ctx.cwd);
 		for (const changedPath of changedPaths) {
 			const absolutePath = path.isAbsolute(changedPath)
 				? path.normalize(changedPath)
 				: path.resolve(ctx.cwd, changedPath);
 			const normalizedAbsolutePath = normalizePath(absolutePath);
-			const normalizedRelativePath = normalizePath(path.relative(ctx.cwd, absolutePath));
+			const normalizedRelativePath = normalizePath(path.relative(projectDirectory, absolutePath));
 
 			for (const rule of rules) {
 				if (
@@ -301,6 +332,38 @@ function matchesGlob(
 	}
 
 	return matcher(candidatePath);
+}
+
+function buildReminderEditPrompt(rulesFilePath: string, projectDirectory: string, args: string): string {
+	const requestedChange = readNonEmptyString(args);
+	const changeInstructions = requestedChange === null
+		? "Explain what changes you recommend, then ask me what to add, edit, or remove."
+		: `Apply this requested change: ${requestedChange}`;
+
+	return [
+		"Help me update this project reminder configuration file:",
+		`- ${rulesFilePath}`,
+		"",
+		"Purpose of this file:",
+		"- It defines reminders that are auto-injected when matching files are changed.",
+		"- Each rule maps a file pattern (glob) to a reminder message sent to the agent.",
+		"",
+		"Glob usage:",
+		"- 'glob' uses picomatch syntax (for example *, **, ?, braces like {ts,tsx}, and extglobs).",
+		`- Relative globs are matched from the project marker directory: ${projectDirectory}`,
+		"- Example relative glob: src/**/*.ts",
+		"- The project marker directory is the nearest ancestor containing .git or .pi.",
+		"- Absolute globs are matched against normalized absolute file paths.",
+		"- Use specific patterns to avoid noisy reminders.",
+		"",
+		"Requirements:",
+		"- Keep valid JSON with a top-level array.",
+		"- Each rule must have non-empty string fields: glob, reminder.",
+		"- Preserve existing rules unless my request says otherwise.",
+		"- Use 2-space indentation.",
+		"",
+		changeInstructions,
+	].join("\n");
 }
 
 async function pathExists(filePath: string): Promise<boolean> {

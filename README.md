@@ -35,6 +35,22 @@ Create a rules file at your project root:
 ]
 ```
 
+## Slash command
+
+Use the built-in extension command:
+
+```text
+/pi-file-change-reminder
+```
+
+This injects a user message that asks Pi to help update the reminder config file with the required JSON shape, safety constraints, and picomatch glob guidance.
+
+You can also include a specific change request:
+
+```text
+/pi-file-change-reminder add a rule for docs/**/*.md reminding me to run vale
+```
+
 ## Rules file resolution
 
 Default rules path is `.pi/reminders.json` resolved from the **nearest ancestor directory** containing either:
@@ -55,8 +71,13 @@ If `PI_REMINDERS_FILE` is relative, it is resolved from the detected project dir
 ## Glob behavior
 
 - Matching engine: `picomatch`
-- Relative rule globs match against paths relative to Pi's current working directory.
+- Relative rule globs match against paths relative to the project marker directory (nearest ancestor with `.git` or `.pi`).
 - Absolute rule globs match against normalized absolute file paths.
+
+## Runtime behavior
+
+- When a rule matches a modified file, the extension injects the reminder as a user message.
+- In interactive mode, it also shows an info notification with the matched path and rule.
 
 ## Development
 
