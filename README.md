@@ -4,14 +4,6 @@
 
 ## Install
 
-### Local path
-
-```bash
-pi install /absolute/path/to/pi-file-change-reminder
-```
-
-### npm (after publish)
-
 ```bash
 pi install npm:pi-file-change-reminder
 ```
