@@ -45,20 +45,38 @@ You can also include a specific change request:
 
 ## Rules file resolution
 
-Default rules path is `.pi/reminders.json` resolved from the **nearest ancestor directory** containing either:
+Preferred configuration uses Pi settings via the package-scoped `pi-file-change-reminder` block.
+
+Global `~/.pi/agent/settings.json`:
+
+```json
+{
+  "pi-file-change-reminder": {
+    "rulesFile": ".pi/reminders.json"
+  }
+}
+```
+
+Project `<cwd>/.pi/settings.json`:
+
+```json
+{
+  "pi-file-change-reminder": {
+    "rulesFile": "config/reminders.json"
+  }
+}
+```
+
+The extension reads both scopes through Pi's `SettingsManager`, with project settings overriding global settings.
+
+If no setting is configured, the default rules path is `.pi/reminders.json` resolved from the **nearest ancestor directory** containing either:
 
 - `.git`, or
 - `.pi`
 
 If no ancestor contains either marker, resolution falls back to Pi's current working directory.
 
-You can override with `PI_REMINDERS_FILE`:
-
-```bash
-export PI_REMINDERS_FILE=/absolute/path/to/reminders.json
-```
-
-If `PI_REMINDERS_FILE` is relative, it is resolved from the detected project directory (same logic as above).
+Relative `rulesFile` values are resolved from that detected project directory. Absolute `rulesFile` values are used as-is.
 
 ## Glob behavior
 

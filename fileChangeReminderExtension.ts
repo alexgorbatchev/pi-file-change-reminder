@@ -1,7 +1,7 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import picomatch from "picomatch";
-import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { SettingsManager, type ExtensionAPI, type ExtensionContext } from "@mariozechner/pi-coding-agent";
 
 interface IReminderRule {
 	glob: string;
@@ -13,6 +13,7 @@ interface IToolInputWithPath {
 }
 
 const EXTENSION_ID = "file-change-reminder";
+const SETTINGS_NAMESPACE = "pi-file-change-reminder";
 const DEFAULT_RULES_FILE = ".pi/reminders.json";
 const COMMAND_NAME = "pi-file-change-reminder";
 const INJECTED_ENTRY_TYPE = `${EXTENSION_ID}.injected`;
@@ -22,6 +23,7 @@ export default function fileChangeReminderExtension(pi: ExtensionAPI): void {
 	let rulesMtimeMs = -1;
 	let hasLoadedRules = false;
 	let lastLoadError = "";
+	let lastSettingsError = "";
 	let injectedReminderKeys = new Set<string>();
 	const globMatcherCache = new Map<string, (candidatePath: string) => boolean>();
 	const projectDirectoryCache = new Map<string, string>();
@@ -71,9 +73,41 @@ export default function fileChangeReminderExtension(pi: ExtensionAPI): void {
 		}
 	};
 
-	const resolveRulesFilePathFromProjectDirectory = (projectDirectory: string): string => {
-		const envValue = process.env.PI_REMINDERS_FILE;
-		const configuredPath = readNonEmptyString(envValue) ?? DEFAULT_RULES_FILE;
+	const reportSettingsErrors = (ctx: ExtensionContext, settingsManager: SettingsManager): void => {
+		const settingsErrors = settingsManager.drainErrors();
+		if (settingsErrors.length === 0) {
+			lastSettingsError = "";
+			return;
+		}
+
+		const settingsErrorMessage = settingsErrors
+			.map(({ scope, error }) => `${scope}: ${getErrorMessage(error)}`)
+			.join("; ");
+		if (settingsErrorMessage !== lastSettingsError && ctx.hasUI) {
+			ctx.ui.notify(`Failed to load reminder settings: ${settingsErrorMessage}`, "warning");
+		}
+
+		lastSettingsError = settingsErrorMessage;
+	};
+
+	const getConfiguredRulesFilePath = (ctx: ExtensionContext): string | null => {
+		const settingsManager = SettingsManager.create(ctx.cwd);
+		reportSettingsErrors(ctx, settingsManager);
+
+		const projectConfiguredPath = readRulesFilePathFromSettings(settingsManager.getProjectSettings());
+		if (projectConfiguredPath !== null) {
+			return projectConfiguredPath;
+		}
+
+		const globalConfiguredPath = readRulesFilePathFromSettings(settingsManager.getGlobalSettings());
+		if (globalConfiguredPath !== null) {
+			return globalConfiguredPath;
+		}
+
+		return null;
+	};
+
+	const resolveRulesFilePathFromProjectDirectory = (projectDirectory: string, configuredPath: string): string => {
 		if (path.isAbsolute(configuredPath)) {
 			return configuredPath;
 		}
@@ -81,13 +115,14 @@ export default function fileChangeReminderExtension(pi: ExtensionAPI): void {
 		return path.resolve(projectDirectory, configuredPath);
 	};
 
-	const resolveRulesFilePath = async (cwd: string): Promise<string> => {
-		const projectDirectory = await resolveProjectDirectory(cwd);
-		return resolveRulesFilePathFromProjectDirectory(projectDirectory);
+	const resolveRulesFilePath = async (ctx: ExtensionContext): Promise<string> => {
+		const projectDirectory = await resolveProjectDirectory(ctx.cwd);
+		const configuredPath = getConfiguredRulesFilePath(ctx) ?? DEFAULT_RULES_FILE;
+		return resolveRulesFilePathFromProjectDirectory(projectDirectory, configuredPath);
 	};
 
 	const loadRules = async (ctx: ExtensionContext, force: boolean): Promise<IReminderRule[]> => {
-		const rulesFilePath = await resolveRulesFilePath(ctx.cwd);
+		const rulesFilePath = await resolveRulesFilePath(ctx);
 
 		let mtimeMs = -1;
 		try {
@@ -181,7 +216,7 @@ export default function fileChangeReminderExtension(pi: ExtensionAPI): void {
 		description: "Inject a prompt that explains how to update reminder rules",
 		handler: async (args, ctx) => {
 			const projectDirectory = await resolveProjectDirectory(ctx.cwd);
-			const rulesFilePath = resolveRulesFilePathFromProjectDirectory(projectDirectory);
+			const rulesFilePath = await resolveRulesFilePath(ctx);
 			const normalizedRulesFilePath = normalizePath(rulesFilePath);
 			const normalizedProjectDirectory = normalizePath(projectDirectory);
 			const prompt = buildReminderEditPrompt(normalizedRulesFilePath, normalizedProjectDirectory, args);
@@ -364,6 +399,19 @@ function buildReminderEditPrompt(rulesFilePath: string, projectDirectory: string
 		"",
 		changeInstructions,
 	].join("\n");
+}
+
+function readRulesFilePathFromSettings(settings: unknown): string | null {
+	if (!isRecord(settings)) {
+		return null;
+	}
+
+	const extensionSettings = settings[SETTINGS_NAMESPACE];
+	if (!isRecord(extensionSettings)) {
+		return null;
+	}
+
+	return readNonEmptyString(extensionSettings.rulesFile);
 }
 
 async function pathExists(filePath: string): Promise<boolean> {
