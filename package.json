@@ -4,6 +4,10 @@
   "description": "Pi extension that injects reminder messages when specific files are modified.",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexgorbatchev/pi-file-change-reminder.git"
+  },
   "keywords": [
     "pi-package",
     "pi-extension",
