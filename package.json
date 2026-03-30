@@ -1,6 +1,6 @@
 {
   "name": "pi-file-change-reminder",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Pi extension that injects reminder messages when specific files are modified.",
   "type": "module",
   "license": "MIT",
