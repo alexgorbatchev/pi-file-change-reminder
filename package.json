@@ -14,12 +14,12 @@
     "reminder"
   ],
   "files": [
-    "fileChangeReminderExtension.ts",
+    "src/fileChangeReminderExtension.ts",
     "README.md"
   ],
   "pi": {
     "extensions": [
-      "./fileChangeReminderExtension.ts"
+      "./src/fileChangeReminderExtension.ts"
     ]
   },
   "dependencies": {
@@ -43,7 +43,7 @@
     "lint": "bash scripts/lint.sh",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run verify:pi-load",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "verify:pi-load": "PI_OFFLINE=1 pi --no-extensions -e ./fileChangeReminderExtension.ts --list-models > /dev/null",
+    "verify:pi-load": "PI_OFFLINE=1 pi --no-extensions -e ./src/fileChangeReminderExtension.ts --list-models > /dev/null",
     "prepublishOnly": "npm run check"
   }
 }
