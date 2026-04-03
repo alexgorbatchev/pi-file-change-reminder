@@ -29,13 +29,21 @@
     "@mariozechner/pi-coding-agent": "*"
   },
   "devDependencies": {
+    "@alexgorbatchev/typescript-ai-policy": "^1.0.1",
     "@mariozechner/pi-coding-agent": "^0.61.1",
     "@types/picomatch": "^4.0.2",
+    "oxfmt": "^0.42.0",
+    "oxlint": "^1.58.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "scripts": {
-    "check": "npm run typecheck && npm run verify:pi-load",
+    "format": "bash scripts/format.sh",
+    "format:check": "bash scripts/format-check.sh",
+    "lint": "bash scripts/lint.sh",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run verify:pi-load",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "verify:pi-load": "PI_OFFLINE=1 pi --no-extensions -e ./fileChangeReminderExtension.ts --list-models > /dev/null"
+    "verify:pi-load": "PI_OFFLINE=1 pi --no-extensions -e ./fileChangeReminderExtension.ts --list-models > /dev/null",
+    "prepublishOnly": "npm run check"
   }
 }
