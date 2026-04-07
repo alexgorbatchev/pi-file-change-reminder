@@ -206,8 +206,6 @@ export default function fileChangeReminderExtension(pi: ExtensionAPI): void {
   };
 
   pi.on("session_start", onSessionChanged);
-  pi.on("session_switch", onSessionChanged);
-  pi.on("session_fork", onSessionChanged);
   pi.on("session_tree", onSessionChanged);
 
   pi.registerCommand(COMMAND_NAME, {
