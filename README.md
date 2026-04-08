@@ -95,7 +95,7 @@ This package uses Bun.
 
 ```bash
 bun install
-bun run fmt
+bun run fix
 bun run check
 bun run test
 ```
