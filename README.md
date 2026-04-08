@@ -91,18 +91,13 @@ Relative `rulesFile` values are resolved from that detected project directory. A
 
 ## Development
 
-This package uses npm.
+This package uses Bun.
 
 ```bash
-npm install
-npm run check
-```
-
-Or run the individual checks:
-
-```bash
-npm run typecheck
-npm run verify:pi-load
+bun install
+bun run fmt
+bun run check
+bun run test
 ```
 
 ## Current limitation
