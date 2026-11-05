@@ -91,14 +91,15 @@ Relative `rulesFile` values are resolved from that detected project directory. A
 
 ## Development
 
-This package uses Bun.
+Use Bun 1.4 or newer and `just`. The extension requires Pi 1.x (1.5 or newer) from `@earendil-works` and Node.js 22.19 or newer.
 
 ```bash
-bun install
-bun run fix
-bun run check
-bun run test
+just setup
+just check
+just run
 ```
+
+`just run` uses your real Pi settings. `just test` runs through the GitHub-pinned [pi-test-isolation](https://github.com/alexgorbatchev/pi-test-isolation) supervisor and guard, isolating home, caches, sessions, temporary files, and child processes. Direct `bun test` is rejected outside isolation. Tests exercise the installed Pi loader, rule matching, session deduplication, settings precedence, delivery, and error recovery. Linux and macOS CI enforce at least 90% line and function coverage, including unexecuted source.
 
 ## Current limitation
 

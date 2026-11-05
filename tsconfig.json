@@ -8,5 +8,5 @@
     "noEmit": true,
     "types": ["node", "bun"]
   },
-  "include": ["src/**/*.ts", "scripts/**/*.ts"]
+  "include": ["src/**/*.ts", "*.config.ts"]
 }
